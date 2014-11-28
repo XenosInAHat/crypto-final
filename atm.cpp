@@ -14,7 +14,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <openssl/rand.h>
+#include <openssl/rsa.h>
+#include <openssl/bn.h>
+#include <openssl/pem.h>
 
+// Port range to prevent using reserved ports
 #define MINIMUM_PORT 1024
 #define MAXIMUM_PORT 49151
 
@@ -27,6 +31,33 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
+    // RSA key generation (same as the process in bank.cpp)
+    RSA *rsa;
+    int num_bits = 1024;
+    BIGNUM *e = BN_new();
+    BN_set_word(e, RSA_F4);
+
+    char *pub_key, *pri_key;
+    int pub_len, pri_len;
+
+    rsa = RSA_new();
+
+    RSA_generate_key_ex(rsa, num_bits, e, 0);
+    BIO *pri = BIO_new(BIO_s_mem());
+    BIO *pub = BIO_new(BIO_s_mem());
+
+    PEM_write_bio_RSAPrivateKey(pri, rsa, NULL, NULL, 0, NULL, NULL);
+    PEM_write_bio_RSAPublicKey(pub, rsa);
+
+    pri_len = BIO_pending(pri);
+    pub_len = BIO_pending(pub);
+
+    BIO_read(pri, pri_key, pri_len);
+    BIO_read(pub, pub_key, pub_len);
+    
+    pri_key[pri_len] = '\0';
+    pub_key[pub_len] = '\0';
+    // -------------- End RSA key generation --------------- //
     // =========
     // Variables
     // =========
@@ -326,7 +357,6 @@ int main(int argc, char* argv[])
                 printf("Error: Failed to read packet.\n");
                 break;
             }
-
         }
 	}
 	
