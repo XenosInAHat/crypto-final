@@ -31,6 +31,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
+    /*
     // RSA key generation (same as the process in bank.cpp)
     RSA *rsa;
     int num_bits = 1024;
@@ -58,6 +59,7 @@ int main(int argc, char* argv[])
     pri_key[pri_len] = '\0';
     pub_key[pub_len] = '\0';
     // -------------- End RSA key generation --------------- //
+    */
     // =========
     // Variables
     // =========
@@ -253,12 +255,19 @@ int main(int argc, char* argv[])
                 sending = 1;
             }
         }
+        else
+        {
+            printf("Error: Invalid command.\n");
+            continue;
+        }
 		
 		// Send the packet through the proxy to the bank.
         if(sending == 1)
         {
             // First, send the packet length
-            length = strlen(buf);
+            memset(packet+strlen(packet), ' ', 1);
+            memset(packet+strlen(packet), 'a', 1023-strlen(packet));
+            length = strlen(packet);
             if(sizeof(int) != send(sock, &length, sizeof(int), 0))
             {
                 printf("Error: Failed to send packet length.\n");
@@ -297,9 +306,26 @@ int main(int argc, char* argv[])
 		}
 
         // Handle the response from the bank asking for a PIN
-        printf("%s\n", packet);
+        char output_packet[1024];
+        char *tok;
+        
+        tok = strtok(packet, " ");
+        strncpy(output_packet, tok, strlen(tok));
+        output_packet[strlen(tok)] = '\0';
+        while(tok)
+        {
+            tok = strtok(NULL, " ");
+            if(strlen(tok) > 20 || tok == NULL)
+            {
+                break;
+            }
+            strncat(output_packet, " ", 1);
+            strncat(output_packet, tok, strlen(tok));
+        }
+
+        printf("%s\n", output_packet);
         int sent_pin = 0;
-        if(!strcmp(packet, "PIN") && sent_pin == 0)
+        if(strstr(packet, "PIN") && sent_pin == 0)
         {
             // temp: used to format the buffer
 
@@ -323,8 +349,10 @@ int main(int argc, char* argv[])
             // Write message to the packet
             strncpy(packet, temp, strlen(temp));
 
+            memset(packet+strlen(packet), ' ', 1);
+            memset(packet+strlen(packet), 'a', 1023-strlen(packet));
             // length: packet length
-            length = strlen(temp);
+            length = strlen(packet);
             if(sizeof(int) != send(sock, &length, sizeof(int), 0))
             {
                 printf("Error: Failed to send packet length.\n");

@@ -73,6 +73,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 	
+    /*
     // Create RSA public/private keys for the bank
     RSA *rsa;
     int num_bits = 1024;
@@ -99,6 +100,7 @@ int main(int argc, char* argv[])
     pri_key[pri_len] = '\0';
     pub_key[pub_len] = '\0';
     // ----------- End RSA key generation ----------- //
+    */
 
     // Make sure vectors are empty before starting
     users.clear();
@@ -171,17 +173,17 @@ void* client_thread(void* arg)
     char *current_user;
 	
 	printf("[bank] client ID #%d connected\n", csock);
-
-    if(sizeof(int) != send(csock, &pub_len, sizeof(int), 0))
+    /*
+    int len = strlen(pub_key);
+    if(sizeof(int) != send(csock, &len, sizeof(int), 0))
     {
         printf("[bank] fail to send packet length\n");
-        break;
     }
-    if(length != send(csock, (void*)pub_key, length, 0))
+    if(len != send(csock, (void*)pub_key, len, 0))
     {
         printf("[bank] fail to send packet\n");
-        break;
     }
+    */
 
 	//input loop
 	int length;
@@ -372,7 +374,7 @@ void* client_thread(void* arg)
             strncpy(packet, message, strlen(message));
         }
         // Handle a balance request
-        else if(!strcmp(packet, "balance"))
+        else if(strstr(packet, "balance"))
         {
             // balance: keep track of user's balance
             // message: used to prepare a message to be sent
@@ -632,6 +634,8 @@ void* client_thread(void* arg)
         }
 		
 		//send the new packet back to the client
+        memset(packet+strlen(packet), ' ', 1);
+        memset(packet+strlen(packet), 'a', 1023-strlen(packet));
         length = strlen(packet);
 		if(sizeof(int) != send(csock, &length, sizeof(int), 0))
 		{
