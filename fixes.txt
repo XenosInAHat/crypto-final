@@ -14,3 +14,5 @@
 				should be something like: (int)strtol(nptr, (char **)NULL, 10), read the man page
 
 	strncat has the same vulnerability as above.
+
+	use strncmp instead of strcmp. strcmp could potentially allow an attacker to read information off of the stack.
