@@ -16,3 +16,11 @@
 	strncat has the same vulnerability as above.
 
 	use strncmp instead of strcmp. strcmp could potentially allow an attacker to read information off of the stack.
+
+	Do we have any way of mitigating replay attacks? 
+
+	a replay attack:
+
+		Suppose Alice wants to prove her identity to Bob. Bob requests her password as proof of identity, which Alice dutifully provides (possibly after some transformation like a hash function); meanwhile, Eve is eavesdropping on the conversation and keeps the password (or the hash). After the interchange is over, Eve (posing as Alice) connects to Bob; when asked for a proof of identity, Eve sends Alice's password (or hash) read from the last session, which Bob accepts thus granting access to Eve.
+
+	The easiest way to mitigate this is to have the bank send a random one time token to the atm, the atm then adds this to the login password, encrypts that, and sends it over. The bank then decrypts the message and checks to confirm that the cookie matches.
