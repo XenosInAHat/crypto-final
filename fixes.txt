@@ -1,0 +1,16 @@
+	ensure all strings are null terminated when they enter the program.
+
+	strncpy(packet, buf, strlen(buf)); should be strncpy(packet, buf, strlen(buf)-1); to ensure null terminated string, or else it's vulnerable to a buffer overflow attack
+
+	is data that's passed between the atm to the proxy encrypted?
+	is data that's passed between the proxy to the bank encrypted?
+
+	use snprintf() instead of printf() in places where your printing out a variable, (%d,%s,%n, etc)
+
+	i'm glad your doing input validation on the atm, proxy, and bank.
+
+	atoi does not check for bit underflows or overflows. Vulnerable to integer overflow attack.
+				use strtol() instead.
+				should be something like: (int)strtol(nptr, (char **)NULL, 10), read the man page
+
+	strncat has the same vulnerability as above.
