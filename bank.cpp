@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
     users.clear();
     logged_in.clear();
     // Keep track of bank port
-	unsigned short ourport = atoi(argv[1]);
+	unsigned short ourport = (int)strtol(argv[1], NULL, 10);
 	
 	// Create socket for communication between bank and proxy
 	int lsock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -221,7 +221,7 @@ void* client_thread(void* arg)
             char temp[1024];
 
             // Copy the packet's data into temp
-            strncpy(temp, packet, strlen(packet));
+            strlcpy(temp, packet, sizeof(packet));
             memset(message, 0, sizeof(message));
 
             // Grab the first token in the string (should be 'login')
@@ -233,14 +233,14 @@ void* client_thread(void* arg)
             // See if there isn't a second token
             if(toks == NULL)
             {
-                strncpy(message, "Error: Usage: login [username].", 32);
+                strlcpy(message, "Error: Usage: login [username].", sizeof("Error: Usage: login [username]."));
             }
             // Otherwise, take the (assumed) username and compare it to the list of valid
             // users (defined in the main function)
             else
             {
                 // Copy the data from toks into username
-                strncpy(username, toks, strlen(toks));
+                strlcpy(username, toks, sizeof(toks));
 
                 // Check if user is currently logged on via another ATM client
                 int already_on = 0;
@@ -249,7 +249,7 @@ void* client_thread(void* arg)
                 {
                     for(int i = 0; i < logged_in.size(); ++i)
                     {
-                        if(!strcmp(logged_in[i], username))
+                        if(!strncmp(logged_in[i], username, sizeof(username)))
                         {
                             already_on = 1;
                             break;
@@ -261,7 +261,7 @@ void* client_thread(void* arg)
                 // If the user is currently logged on, report it
                 if(already_on == 1)
                 {
-                    strncpy(message, "Error: User is already logged on.", 34);
+                    strlcpy(message, "Error: User is already logged on.", sizeof("Error: User is already logged on."));
                     printf("bank> ");
                 }
                 else
@@ -277,7 +277,7 @@ void* client_thread(void* arg)
                     pthread_mutex_lock(&lock);
                     for(tuple_list t: users)
                     {
-                        if(!strcmp(std::get<0>(t), username))
+                        if(!strncmp(std::get<0>(t), username, sizeof(username)))
                         {
                             exists = 1;
                             break;
@@ -288,7 +288,7 @@ void* client_thread(void* arg)
                     // If the username exists, prepare a message to request the user's PIN
                     if(exists == 1)
                     {
-                        strncpy(message, "PIN", 4);
+                        strlcpy(message, "PIN", sizeof("PIN"));
                         current_user = username;
 
                         pthread_mutex_lock(&lock);
@@ -298,7 +298,7 @@ void* client_thread(void* arg)
                     // Otherwise, prepare a message stating that the username is invalid
                     else
                     {
-                        strncpy(message, "Error: Invalid username.", 25);
+                        strlcpy(message, "Error: Invalid username.", sizeof("Error: Invalid username."));
                     }
                 }
             }
@@ -306,7 +306,7 @@ void* client_thread(void* arg)
             // Clear the packet before writing to it
             memset(packet, 0, sizeof(packet));
             // Copy the message data into the packet
-            strncpy(packet, message, strlen(message));
+            strlcpy(packet, message, sizeof(message));
         }
         // Handle a client request that provides the user's PIN
         else if(strstr(packet, "PIN"))
@@ -321,7 +321,7 @@ void* client_thread(void* arg)
             memset(message, 0, sizeof(message));
 
             // Copy the packet's data into temp
-            strncpy(temp, packet, strlen(packet));
+            strlcpy(temp, packet, sizeof(packet));
 
             // Grab the first token (should be 'PIN')
             toks = strtok(temp, " ");
@@ -331,13 +331,13 @@ void* client_thread(void* arg)
             // Check if there is no second token
             if(toks == NULL)
             {
-                strncpy(message, "Error: Invalid PIN message.", 28);
+                strlcpy(message, "Error: Invalid PIN message.", sizeof("Error: Invalid PIN message."));
             }
             // Otherwise, handle the PIN
             else
             {
                 // Convert the string to an integer
-                pin = atoi(toks);
+                pin = (int)strtol(toks, NULL, 10);
 
                 // Flag to check if the PIN is valid
                 int success = 0;
@@ -349,12 +349,12 @@ void* client_thread(void* arg)
                 pthread_mutex_lock(&lock);
                 for(tuple_list t: users)
                 {
-                    if(!strcmp(current_user, std::get<0>(t)))
+                    if(!strncmp(current_user, std::get<0>(t), sizeof(std::get<0>(t))))
                     {
                         if(pin == std::get<1>(t))
                         {
                             memset(message, 0, sizeof(message));
-                            strncpy(message, "Login successful.", 18);
+                            strlcpy(message, "Login successful.", sizeof("Login successful."));
                             success = 1;
                         }
                     }
@@ -364,14 +364,14 @@ void* client_thread(void* arg)
                 // Prepare a message if PINs are not the same.
                 if(success == 0)
                 {
-                    strncpy(message, "Error: Invalid PIN.", 20);
+                    strlcpy(message, "Error: Invalid PIN.", sizeof("Error: Invalid PIN."));
                 }
             }
 
             // Clear the packet before setting the data
             memset(packet, 0, sizeof(packet));
             // Copy the message data into the packet
-            strncpy(packet, message, strlen(message));
+            strlcpy(packet, message, sizeof(message));
         }
         // Handle a balance request
         else if(strstr(packet, "balance"))
@@ -386,7 +386,7 @@ void* client_thread(void* arg)
             for(tuple_list t: users)
             {
                 pthread_mutex_lock(&lock);
-                if(!strcmp(std::get<0>(t), current_user))
+                if(!strncmp(std::get<0>(t), current_user, sizeof(std::get<0>(t))))
                 {
                     balance = std::get<2>(t);
                 }
@@ -398,7 +398,7 @@ void* client_thread(void* arg)
             // Write the balance to a character array
             snprintf(message, sizeof(message), "Balance: $%d", balance);
             // Copy the message data into the packet
-            strncpy(packet, message, strlen(message));
+            strlcpy(packet, message, sizeof(message));
         }
         // Handle a withdraw request
         else if(strstr(packet, "withdraw"))
@@ -410,7 +410,7 @@ void* client_thread(void* arg)
             char temp[1024];
 
             // Copy packet data into temp
-            strncpy(temp, packet, strlen(packet));
+            strlcpy(temp, packet, sizeof(packet));
 
             // Grab first token (should be 'withdraw')
             toks = strtok(temp, " ");
@@ -420,13 +420,13 @@ void* client_thread(void* arg)
             // Check if second token exists
             if(toks == NULL)
             {
-                strncpy(message, "Error: Usage: withdraw [amount].", 33);
+                strlcpy(message, "Error: Usage: withdraw [amount].", sizeof("Error: Usage: withdraw [amount]."));
             }
             // If it does, handle it
             else
             {
                 // Convert the amount to an integer
-                int amount = atoi(toks);
+                int amount = (int)strtol(toks, NULL, 10);
                 // Keep track of user's balance
                 int balance = 0;
 
@@ -434,7 +434,7 @@ void* client_thread(void* arg)
                 pthread_mutex_lock(&lock);
                 for(tuple_list t: users)
                 {
-                    if(!strcmp(std::get<0>(t), current_user))
+                    if(!strncmp(std::get<0>(t), current_user, sizeof(std::get<0>(t))))
                     {
                         balance = std::get<2>(t);
                         break;
@@ -445,7 +445,7 @@ void* client_thread(void* arg)
                 // Check if user's balance is below the requested withdrawal amount
                 if(balance < amount)
                 {
-                    strncpy(message, "Error: Balance too low.", 24);
+                    strlcpy(message, "Error: Balance too low.", sizeof("Error: Balance too low."));
                 }
                 // If it's not, handle it
                 else
@@ -457,7 +457,7 @@ void* client_thread(void* arg)
                     pthread_mutex_lock(&lock);
                     for(tuple_list t: users)
                     {
-                        if(!strcmp(std::get<0>(t), current_user))
+                        if(!strncmp(std::get<0>(t), current_user, sizeof(std::get<0>(t))))
                         {
                             char *temp_user = std::get<0>(t);
                             unsigned short temp_pin = std::get<1>(t);
@@ -478,7 +478,7 @@ void* client_thread(void* arg)
             // Clear packet to prepare for data
             memset(packet, 0, sizeof(packet));
             // Copy message data into packet
-            strncpy(packet, message, strlen(message));
+            strlcpy(packet, message, sizeof(message));
         }
         // Handle transfer request
         else if(strstr(packet, "transfer"))
@@ -493,7 +493,7 @@ void* client_thread(void* arg)
             int amount = 0;
 
             // Copy packet data into temp
-            strncpy(temp, packet, strlen(packet));
+            strlcpy(temp, packet, sizeof(packet));
 
             // Grab the first token (should be 'transfer')
             toks = strtok(temp, " ");
@@ -503,13 +503,13 @@ void* client_thread(void* arg)
             // Check if second token exists
             if(toks == NULL)
             {
-                strncpy(message, "Error: Usage: transfer [amount] [username]", 43);
+                strlcpy(message, "Error: Usage: transfer [amount] [username]", sizeof("Error: Usage: transfer [amount] [username]"));
             }
             // If it does, keep going
             else
             {
                 // Store amount as integer (convert token)
-                amount = atoi(toks);
+                amount = (int)strtol(toks, NULL, 10);
                 // Keep track of user's initial balance
                 int balance = 0;
                 
@@ -517,7 +517,7 @@ void* client_thread(void* arg)
                 pthread_mutex_lock(&lock);
                 for(tuple_list t: users)
                 {
-                    if(!strcmp(std::get<0>(t), current_user))
+                    if(!strncmp(std::get<0>(t), current_user, sizeof(std::get<0>(t))))
                     {
                         balance = std::get<2>(t);
                     }
@@ -527,7 +527,7 @@ void* client_thread(void* arg)
                 // Check if the user's balance is too low
                 if(balance < amount)
                 {
-                    strncpy(message, "Error: Balance too low", 23);
+                    strlcpy(message, "Error: Balance too low", sizeof("Error: Balance too low"));
                 }
                 // If it's not, keep going
                 else
@@ -537,7 +537,7 @@ void* client_thread(void* arg)
                     // Check if third token exists
                     if(toks == NULL)
                     {
-                        strncpy(message, "Error: Usage: transfer [amount] [username]", 43);
+                        strlcpy(message, "Error: Usage: transfer [amount] [username]", sizeof("Error: Usage: transfer [amount] [username]"));
                     }
                     // If it does, keep going
                     else
@@ -546,9 +546,9 @@ void* client_thread(void* arg)
                         username = toks;
                         // Check if the destination is the same as the source (we won't let
                         // this kind of transfer happen)
-                        if(!strcmp(username, current_user))
+                        if(!strncmp(username, current_user, sizeof(username)))
                         {
-                            strncpy(message, "Error: Cannot transfer to yourself", 35);
+                            strlcpy(message, "Error: Cannot transfer to yourself", sizeof("Error: Cannot transfer to yourself"));
                         }
                         // If it's not, keep going
                         else
@@ -560,7 +560,7 @@ void* client_thread(void* arg)
                             pthread_mutex_lock(&lock);
                             for(tuple_list t: users)
                             {
-                                if(!strcmp(std::get<0>(t), username))
+                                if(!strncmp(std::get<0>(t), username, sizeof(username)))
                                 {
                                     exists = 1;
                                     break;
@@ -577,7 +577,7 @@ void* client_thread(void* arg)
                                 pthread_mutex_unlock(&lock);
                                 for(std::vector<tuple_list>::iterator i = users.begin(); i != users.end();)
                                 {
-                                    if(!strcmp(std::get<0>(*i), current_user))
+                                    if(!strncmp(std::get<0>(*i), current_user, sizeof(current_user)))
                                     {
                                         char *temp_user = std::get<0>(*i);
                                         unsigned short temp_pin = std::get<1>(*i);
@@ -585,7 +585,7 @@ void* client_thread(void* arg)
                                         t_new = std::tuple<char*, unsigned short, int>(temp_user, temp_pin, temp_balance);
                                         i = users.erase(i);
                                     }
-                                    else if(!strcmp(std::get<0>(*i), username))
+                                    else if(!strncmp(std::get<0>(*i), username, sizeof(username)))
                                     {
                                         char *temp_user_2 = std::get<0>(*i);
                                         unsigned short temp_pin_2 = std::get<1>(*i);
@@ -610,7 +610,7 @@ void* client_thread(void* arg)
                             // Otherwise, prepare a failure message
                             else
                             {
-                                strncpy(message, "Error: Destination user does not exist.", 40);
+                                strlcpy(message, "Error: Destination user does not exist.", sizeof("Error: Destination user does not exist."));
                             }
                         }
                     }
@@ -620,7 +620,7 @@ void* client_thread(void* arg)
             // Clear the packet to prepare for new data
             memset(packet, 0, sizeof(packet));
             // Copy the message data into the packet
-            strncpy(packet, message, strlen(message));
+            strlcpy(packet, message, sizeof(message));
         }
         // Handle invalid commands
         else
@@ -630,7 +630,7 @@ void* client_thread(void* arg)
             // Clear packet for message data
             memset(packet, 0, sizeof(packet));
             // Copy message data into packet
-            strncpy(packet, message, strlen(message));
+            strlcpy(packet, message, sizeof(message));
         }
 		
 		//send the new packet back to the client
@@ -677,7 +677,7 @@ void* console_thread(void* arg)
             int amt = 0;
 
             // Copy data into temp array for tokenizing
-            strncpy(temp, buf, strlen(buf));
+            strlcpy(temp, buf, sizeof(buf));
             // Grab the first token (should be deposit)
             toks = strtok(temp, " ");
 
@@ -691,14 +691,14 @@ void* console_thread(void* arg)
             else
             {
                 // Copy the token into a username variable for future use
-                strncpy(username, toks, strlen(toks));
+                strlcpy(username, toks, sizeof(toks));
 
                 // Check if the target user actually exists
                 int exists = 0;
                 pthread_mutex_lock(&lock);
                 for(tuple_list t: users)
                 {
-                    if(!strcmp(std::get<0>(t), username))
+                    if(!strncmp(std::get<0>(t), username, sizeof(username)))
                     {
                         exists = 1;
                         break;
@@ -722,15 +722,15 @@ void* console_thread(void* arg)
                     else
                     {
                         // Copy data into an amount variable
-                        strncpy(amount, toks, strlen(toks));
+                        strlcpy(amount, toks, sizeof(toks));
                         // Convert the amount into an integer
-                        amt = atoi(amount);
+                        amt = (int)strtol(amount, NULL, 10);
 
                         // Update the balance for the appropriate user
                         pthread_mutex_lock(&lock);
                         for(tuple_list t: users)
                         {
-                            if(!strcmp(std::get<0>(t), username))
+                            if(!strncmp(std::get<0>(t), username, sizeof(username)))
                             {
                                 char *temp_user = std::get<0>(t);
                                 unsigned short temp_pin = std::get<1>(t);
@@ -755,7 +755,7 @@ void* console_thread(void* arg)
             char *toks, username[80], temp[80];
 
             // Copy data into a temp array for tokenizing
-            strncpy(temp, buf, strlen(buf));
+            strlcpy(temp, buf, sizeof(buf));
 
             // Grab the first token
             toks = strtok(temp, " ");
@@ -769,7 +769,7 @@ void* console_thread(void* arg)
             else
             {
                 // Copy the data into a username variable
-                strncpy(username, toks, strlen(toks));
+                strlcpy(username, toks, sizeof(toks));
                 int exists = 0;
 
                 // Check if the target user exists and print out his
@@ -777,7 +777,7 @@ void* console_thread(void* arg)
                 pthread_mutex_lock(&lock);
                 for(tuple_list t: users)
                 {
-                    if(!strcmp(std::get<0>(t), username))
+                    if(!strncmp(std::get<0>(t), username, sizeof(username)))
                     {
                         printf("Balance: %d\n", std::get<2>(t));
                         exists = 1;

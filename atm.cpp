@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
 
     // Check if atoi is successful. If not, the provided argument isn't a
     // valid port number.
-    if(!(temp = atoi(argv[1])))
+    if(!(temp = (int)strtol(argv[1], NULL, 10)))
     {
         printf("Error: Please provide a valid port number.\n");
         return -1;
@@ -152,12 +152,12 @@ int main(int argc, char* argv[])
         {
             memset(packet, 0, sizeof(packet));
             // Compare full command with only three options because laziness
-            if(!strcmp(buf, "login Alice") || 
-               !strcmp(buf, "login Bob") || 
-               !strcmp(buf, "login Eve"))
+            if(!strncmp(buf, "login Alice", sizeof(buf)) || 
+               !strncmp(buf, "login Bob", sizeof(buf)) || 
+               !strncmp(buf, "login Eve", sizeof(buf)))
             {
                 // Copy the input buffer (buf) to the packet buffer (packet)
-                strncpy(packet, buf, strlen(buf));
+                strlcpy(packet, buf, sizeof(buf));
                 sending = 1;
             }
             else
@@ -166,10 +166,10 @@ int main(int argc, char* argv[])
             }
         }
         // Compare the full command to 'balance'
-        else if(!strcmp(buf, "balance"))
+        else if(!strncmp(buf, "balance", sizeof(buf)))
         {
             // Copy the input buffer (buf) to the packet buffer (packet)
-            strncpy(packet, buf, strlen(buf));
+            strlcpy(packet, buf, sizeof(buf));
             sending = 1;
         }
         // Check if 'withdraw' exists in the command
@@ -183,7 +183,7 @@ int main(int argc, char* argv[])
             unsigned short count = 0;
 
             // Copy buf's data into temp
-            strncpy(temp, buf, strlen(buf));
+            strlcpy(temp, buf, sizeof(buf));
 
             // Get the first token 
             toks = strtok(temp, " ");
@@ -207,12 +207,12 @@ int main(int argc, char* argv[])
             else
             {
                 // Copy the input buffer (buf) to the packet buffer (packet)
-                strncpy(packet, buf, strlen(buf));
+                strlcpy(packet, buf, sizeof(buf));
                 sending = 1;
             }
         }
         // Compare the command to 'logout'
-        else if(!strcmp(buf, "logout"))
+        else if(!strncmp(buf, "logout", sizeof(buf)))
         {
             // If the user logs out, we want to close the connection, so we
             // break from the while loop
@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
             unsigned short count = 0;
 
             // Copy buf's data into temp
-            strncpy(temp, buf, strlen(buf));
+            strlcpy(temp, buf, sizeof(buf));
 
             // Get the first token 
             toks = strtok(temp, " ");
@@ -251,7 +251,7 @@ int main(int argc, char* argv[])
             else
             {
                 // Copy the input buffer (buf) to the packet buffer (packet)
-                strncpy(packet, buf, strlen(buf));
+                strlcpy(packet, buf, sizeof(buf));
                 sending = 1;
             }
         }
@@ -310,7 +310,7 @@ int main(int argc, char* argv[])
         char *tok;
         
         tok = strtok(packet, " ");
-        strncpy(output_packet, tok, strlen(tok));
+        strlcpy(output_packet, tok, sizeof(tok));
         output_packet[strlen(tok)] = '\0';
         while(tok)
         {
@@ -319,8 +319,8 @@ int main(int argc, char* argv[])
             {
                 break;
             }
-            strncat(output_packet, " ", 1);
-            strncat(output_packet, tok, strlen(tok));
+            strlcat(output_packet, " ", sizeof(" "));
+            strlcat(output_packet, tok, sizeof(tok));
         }
 
         printf("%s\n", output_packet);
@@ -343,11 +343,11 @@ int main(int argc, char* argv[])
             memset(packet, 0, sizeof(packet));
 
             // Start creating message (prefix it with 'PIN')
-            strncpy(temp, "PIN ", 4);
+            strlcpy(temp, "PIN ", sizeof("PIN "));
             // Add user's PIN to message
-            strncat(temp, buf, strlen(buf));
+            strlcat(temp, buf, sizeof(buf));
             // Write message to the packet
-            strncpy(packet, temp, strlen(temp));
+            strlcpy(packet, temp, sizeof(temp));
 
             memset(packet+strlen(packet), ' ', 1);
             memset(packet+strlen(packet), 'a', 1023-strlen(packet));
